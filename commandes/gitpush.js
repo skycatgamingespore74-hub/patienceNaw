@@ -29,9 +29,9 @@ module.exports = {
       git config user.name "skycatgamingespore74-hub" &&
       git config user.email "skycatgaming.espore74@gmail.com" &&
       git remote remove origin || true &&
-      git remote add origin https://${token}@github.com/skycatgamingespore74-hub/Anger.git &&
+      git remote add origin https://${token}@github.com/skycatgamingespore74-hub/patienceNaw.git &&
       git add . &&
-      git commit -m "Auto push depuis Replit" || echo "Aucun changement" &&
+      git commit -m "mise a jour V5.8" || echo "Aucun changement" &&
       git push origin main
     `;
 
