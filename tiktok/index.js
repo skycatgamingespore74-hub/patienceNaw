@@ -2,20 +2,29 @@ require("dotenv").config();
 const { WebcastPushConnection } = require("tiktok-live-connector");
 const fs = require("fs");
 const path = require("path");
-const logClock = require("./système/logClock");
 
 const TIKTOK_UNIQUE_ID = process.env.TIKTOK_UNIQUE_ID;
-const { client: twitchClient } = require("../twitch/index"); // <-- client Twitch direct
+const { client: twitchClient } = require("../twitch/index"); // Assure-toi que Twitch exporte { client }
 
 if (!TIKTOK_UNIQUE_ID) {
   console.error("❌ TIKTOK_UNIQUE_ID manquant");
   process.exit(1);
 }
 
+// ----------------------------
+// État du bot
+// ----------------------------
 const pauseState = { isPaused: false, stoppoints: false };
 const commandes = new Map();
 const commandesPath = path.join(__dirname, "commandes");
 let liveActive = false;
+
+// ----------------------------
+// Fonction pour l'heure
+// ----------------------------
+function getTime() {
+  return new Date().toLocaleString(); // format local, ex: "Jan 9, 2026 23:12:31"
+}
 
 // ----------------------------
 // Chargement des commandes
@@ -26,20 +35,19 @@ if (fs.existsSync(commandesPath)) {
     const cmd = require(path.join(commandesPath, file));
     if (cmd?.name && typeof cmd.execute === "function") {
       commandes.set(cmd.name, cmd);
-      console.log(`[${logClock.getTime()}] ✅ Commande TikTok chargée : ${cmd.name}`);
+      console.log(`[${getTime()}] ✅ Commande TikTok chargée : ${cmd.name}`);
     }
   });
 }
 
 // ----------------------------
-// Fonction pour envoyer un message direct sur Twitch
+// Relai vers Twitch
 // ----------------------------
 function sendToTwitch(msg) {
   if (!twitchClient) {
-    console.warn(`[${logClock.getTime()}] ⚠️ Twitch non connecté, message perdu : ${msg}`);
+    console.warn(`[${getTime()}] ⚠️ Twitch non connecté, message perdu : ${msg}`);
     return;
   }
-  // Envoi sur le channel principal défini dans le client Twitch
   twitchClient.say(process.env.CHANNEL_NAME, `[TikTok] ${msg}`);
 }
 
@@ -57,10 +65,10 @@ async function connectTikTok() {
       pauseState,
       username: data.uniqueId,
       message: data.comment.trim(),
-      send: sendToTwitch // <-- toutes les commandes TikTok enverront sur Twitch
+      send: sendToTwitch
     };
 
-    console.log(`[${logClock.getTime()}] 💬 TikTok | ${ctx.username}: ${ctx.message}`);
+    console.log(`[${getTime()}] 💬 TikTok | ${ctx.username}: ${ctx.message}`);
 
     if (ctx.message.startsWith("!")) {
       const args = ctx.message.slice(1).split(/\s+/);
@@ -70,35 +78,35 @@ async function connectTikTok() {
 
       try {
         command.execute(ctx, args);
-        console.log(`[${logClock.getTime()}] ▶️ Commande TikTok exécutée : !${name}`);
+        console.log(`[${getTime()}] ▶️ Commande TikTok exécutée : !${name}`);
       } catch (err) {
-        console.error(`[${logClock.getTime()}] ❌ Erreur exécution commande ${name}:`, err);
+        console.error(`[${getTime()}] ❌ Erreur exécution commande ${name}:`, err);
       }
     }
   });
 
   tiktok.on("connected", () => {
     liveActive = true;
-    console.log(`[${logClock.getTime()}] 🟢 TikTok connecté sur ${TIKTOK_UNIQUE_ID}`);
+    console.log(`[${getTime()}] 🟢 TikTok connecté sur ${TIKTOK_UNIQUE_ID}`);
   });
 
   tiktok.on("disconnected", () => {
     liveActive = false;
-    console.warn(`[${logClock.getTime()}] ⚠️ TikTok déconnecté, nouvelle tentative dans 10s...`);
+    console.warn(`[${getTime()}] ⚠️ TikTok déconnecté, nouvelle tentative dans 10s...`);
     setTimeout(connectTikTok, 10_000);
   });
 
   try {
-    console.log(`[${logClock.getTime()}] ⌛ Tentative de connexion TikTok...`);
+    console.log(`[${getTime()}] ⌛ Tentative de connexion TikTok...`);
     await tiktok.connect();
   } catch (err) {
     liveActive = false;
-    console.warn(`[${logClock.getTime()}] ⚠️ TikTok non en live, nouvelle tentative dans 10s...`);
+    console.warn(`[${getTime()}] ⚠️ TikTok non en live, nouvelle tentative dans 10s...`);
     setTimeout(connectTikTok, 10_000);
   }
 }
 
 // ----------------------------
-// Lancer la connexion
+// Lancement
 // ----------------------------
 connectTikTok();
