@@ -1,0 +1,39 @@
+modules = ["nodejs-20", "python-3.11"]
+[agent]
+expertMode = true
+
+[nix]
+packages = ["spidermonkey"]
+
+[workflows]
+
+[[workflows.workflow]]
+name = "getrewardid"
+mode = "sequential"
+author = 48402058
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node getreward.js"
+
+[[workflows.workflow]]
+name = "getbroid"
+mode = "sequential"
+author = 48402058
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node getbroid.js"
+
+[[workflows.workflow]]
+name = "test"
+mode = "sequential"
+author = 48402058
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node test1.js"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
