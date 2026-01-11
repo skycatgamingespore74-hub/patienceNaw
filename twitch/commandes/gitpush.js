@@ -22,17 +22,12 @@ module.exports = {
 
     const projectPath = path.resolve(__dirname, "..");
 
+    // ✅ Commande Git simplifiée : add, commit, push forcé
     const cmd = `
       cd "${projectPath}" &&
-      git init &&
-      git branch -M main &&
-      git config user.name "skycatgamingespore74-hub" &&
-      git config user.email "skycatgaming.espore74@gmail.com" &&
-      git remote remove origin || true &&
-      git remote add origin https://${token}@github.com/skycatgamingespore74-hub/patienceNaw.git &&
       git add . &&
-      git commit -m "mise a jour V5.8" || echo "Aucun changement" &&
-      git push origin main
+      git commit -m "Mise à jour automatique V5.8" || echo "Aucun changement" &&
+      git push -f https://${token}@github.com/skycatgamingespore74-hub/patienceNaw.git main
     `;
 
     exec(cmd, (err, stdout, stderr) => {
