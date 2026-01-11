@@ -2,8 +2,11 @@ require("dotenv").config();
 
 console.log("🚀 Lancement global du bot...");
 
+// Discord
+require("./Discord/index");
+
 // Twitch
 require("./twitch/index");
 
-// TikTok
+// Tiktok
 require("./tiktok/index");

@@ -8,22 +8,22 @@ packages = ["spidermonkey"]
 [workflows]
 
 [[workflows.workflow]]
-name = "getrewardid"
+name = "deploycommands"
 mode = "sequential"
 author = 48402058
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node getreward.js"
+args = "node système/deployCommande.js"
 
 [[workflows.workflow]]
-name = "getbroid"
+name = "suprCommandes"
 mode = "sequential"
 author = 48402058
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node getbroid.js"
+args = "node système/supprimerCommande.js"
 
 [[workflows.workflow]]
 name = "test"
@@ -32,7 +32,7 @@ author = 48402058
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node test1.js"
+args = "node test-tiktok.js"
 
 [[ports]]
 localPort = 3000

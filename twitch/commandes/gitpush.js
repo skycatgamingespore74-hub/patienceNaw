@@ -20,11 +20,10 @@ module.exports = {
 
     client.say(channel, `@${tags["display-name"]}, push GitHub en cours ⏳`);
 
-    const projectPath = path.resolve(__dirname, "..");
+    const projectRoot = path.resolve(__dirname, "..", ".."); // remonte à la racine du workspace
 
-    // ✅ Commande Git simplifiée : add, commit, push forcé
     const cmd = `
-      cd "${projectPath}" &&
+      cd "${projectRoot}" &&
       git add . &&
       git commit -m "Mise à jour automatique V5.8" || echo "Aucun changement" &&
       git push -f https://${token}@github.com/skycatgamingespore74-hub/patienceNaw.git main
