@@ -1,5 +1,5 @@
-global.tiktokStatus = {
-  connected: false,
-  lastMessage: null,
-  lastMessageAt: null
+module.exports = {
+  isConnected: false,    // est-ce que TikTok est connecté
+  shouldRun: true,       // si false, le bot ne se connecte pas
+  lastMessageTimestamp: 0
 };
