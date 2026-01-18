@@ -34,6 +34,15 @@ author = 48402058
 task = "shell.exec"
 args = "node testJoin.js"
 
+[[workflows.workflow]]
+name = "kill"
+mode = "sequential"
+author = 48402058
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f node"
+
 [[ports]]
 localPort = 3000
 externalPort = 80

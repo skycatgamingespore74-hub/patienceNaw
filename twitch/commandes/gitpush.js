@@ -25,7 +25,7 @@ module.exports = {
     const cmd = `
       cd "${projectRoot}" &&
       git add . &&
-      git commit -m "Mise à jour automatique V11" || echo "Aucun changement" &&
+      git commit -m "Mise à jour V11 fix" || echo "Aucun changement" &&
       git push -f https://${token}@github.com/skycatgamingespore74-hub/patienceNaw.git main
     `;
 
