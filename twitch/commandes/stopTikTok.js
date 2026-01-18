@@ -3,7 +3,7 @@ const tiktokState = require("../../shared/tiktokStatus");
 module.exports = {
   name: "stoptiktok",
   execute(client, channel, tags) {
-    const allowedUsers = ["acesky_esport", "nao"];
+    const allowedUsers = ["acesky_esport", "naw_mchh"];
     if (!allowedUsers.includes(tags.username.toLowerCase()) && !tags.mod) return;
 
     if (!tiktokState.shouldRun) {

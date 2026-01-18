@@ -4,131 +4,148 @@ const fs = require("fs");
 const path = require("path");
 
 const tiktokState = require("../shared/tiktokStatus");
-const { client: twitchClient } = require("../twitch/index");
+const { sendLogToDiscord } = require("../Discord/index");
 
+// =========================
+// ENV
+// =========================
 const TIKTOK_UNIQUE_ID = process.env.TIKTOK_UNIQUE_ID;
-const TWITCH_CHANNEL = process.env.CHANNEL_NAME;
-
 if (!TIKTOK_UNIQUE_ID) {
   console.error("❌ TIKTOK_UNIQUE_ID manquant");
   process.exit(1);
 }
 
-// ----------------------------
-// État & commandes
-// ----------------------------
+// =========================
+// PROTECTION ANTI-DOUBLON
+// =========================
+let isConnecting = false;
+let isConnected = false;
+let tiktok = null;
+
+// =========================
+// ÉTAT & COMMANDES
+// =========================
 const pauseState = { isPaused: false, stoppoints: false };
 const commandes = new Map();
 const commandesPath = path.join(__dirname, "commandes");
 
-// ----------------------------
-// Heure simple
-// ----------------------------
+// =========================
+// HEURE SIMPLE
+// =========================
 function getTime() {
   return new Date().toLocaleString();
 }
 
-// ----------------------------
-// Chargement des commandes TikTok
-// ----------------------------
+// =========================
+// LOGS TIKTOK
+// =========================
+function logTikTok(message) {
+  const logMessage = `[TikTok] ${message}`;
+  console.log(logMessage); // Affiche dans Node
+  sendLogToDiscord("tiktok", message); // Envoie sur Discord
+}
+
+// =========================
+// CHARGEMENT COMMANDES TIKTOK
+// =========================
 if (fs.existsSync(commandesPath)) {
   fs.readdirSync(commandesPath).forEach(file => {
     if (!file.endsWith(".js")) return;
 
-    const cmd = require(path.join(commandesPath, file));
-    if (cmd?.name && typeof cmd.execute === "function") {
-      commandes.set(cmd.name, cmd);
-      console.log(`[${getTime()}] ✅ Commande TikTok chargée : ${cmd.name}`);
+    try {
+      const cmd = require(path.join(commandesPath, file));
+      if (cmd?.name && typeof cmd.execute === "function") {
+        commandes.set(cmd.name.toLowerCase(), cmd);
+        logTikTok(`✅ Commande TikTok chargée : ${cmd.name}`);
+      }
+    } catch (err) {
+      logTikTok(`❌ Erreur commande ${file}: ${err.message}`);
     }
   });
 }
 
-// ----------------------------
-// Envoi vers Twitch
-// ----------------------------
-function sendToTwitch(message) {
-  if (!twitchClient) {
-    console.warn(`[${getTime()}] ⚠️ Twitch non connecté`);
-    return;
-  }
-
-  twitchClient.say(TWITCH_CHANNEL, `[TikTok] ${message}`);
-}
-
-// ----------------------------
-// Fonction de connexion TikTok
-// ----------------------------
+// =========================
+// CONNEXION TIKTOK
+// =========================
 async function connectTikTok() {
-  if (!tiktokState.shouldRun) {
-    console.log("ℹ️ TikTok ne doit pas tourner actuellement");
+  if (isConnecting || isConnected) {
+    logTikTok("⚠️ TikTok déjà connecté ou en cours de connexion");
     return;
   }
 
-  const tiktok = new WebcastPushConnection(TIKTOK_UNIQUE_ID);
+  isConnecting = true;
+  logTikTok("⌛ Connexion TikTok...");
 
+  tiktok = new WebcastPushConnection(TIKTOK_UNIQUE_ID);
+
+  // Connexion établie
   tiktok.on("connected", () => {
+    isConnected = true;
+    isConnecting = false;
     tiktokState.isConnected = true;
-    console.log(`[${getTime()}] 🟢 TikTok connecté`);
+    logTikTok("🟢 TikTok connecté");
   });
 
+  // Déconnexion
   tiktok.on("disconnected", () => {
+    isConnected = false;
+    isConnecting = false;
     tiktokState.isConnected = false;
-    console.warn(`[${getTime()}] 🔴 TikTok déconnecté`);
+    logTikTok("🔴 TikTok déconnecté");
 
-    if (tiktokState.shouldRun) {
-      setTimeout(connectTikTok, 10000);
+    if (tiktokState.shouldRun !== false) {
+      setTimeout(connectTikTok, 10_000); // Reconnexion auto
     }
   });
 
+  // Messages TikTok
   tiktok.on("chat", data => {
     if (!data?.uniqueId || !data?.comment) return;
 
+    const username = data.uniqueId;
+    const message = data.comment.trim();
     tiktokState.lastMessageTimestamp = Date.now();
 
-    const ctx = {
-      platform: "tiktok",
-      pauseState,
-      username: data.uniqueId,
-      message: data.comment.trim(),
-      send: sendToTwitch
-    };
+    // Affiche TOUS les messages dans Node et Discord
+    logTikTok(`${username}: ${message}`);
 
-    console.log(`[${getTime()}] 💬 TikTok | ${ctx.username}: ${ctx.message}`);
+    // Vérifie si c'est une commande
+    if (message.startsWith("!")) {
+      const args = message.slice(1).split(/\s+/);
+      const commandName = args.shift().toLowerCase();
 
-    if (!ctx.message.startsWith("!")) return;
-
-    const args = ctx.message.slice(1).split(/\s+/);
-    const name = args.shift().toLowerCase();
-    const command = commandes.get(name);
-    if (!command) return;
-
-    try {
-      command.execute(ctx, args);
-      console.log(`[${getTime()}] ▶️ Commande TikTok exécutée : !${name}`);
-    } catch (err) {
-      console.error(`[${getTime()}] ❌ Erreur commande ${name}:`, err);
+      if (commandes.has(commandName)) {
+        try {
+          commandes.get(commandName).execute(
+            { platform: "tiktok", pauseState, username, send: logTikTok },
+            args
+          );
+          logTikTok(`▶️ Commande exécutée : !${commandName} par ${username}`);
+        } catch (err) {
+          logTikTok(`❌ Erreur exécution commande !${commandName} : ${err.message}`);
+        }
+      }
     }
   });
 
   try {
-    console.log(`[${getTime()}] ⌛ Connexion à TikTok...`);
     await tiktok.connect();
   } catch (err) {
-    tiktokState.isConnected = false;
-    console.warn(`[${getTime()}] ⚠️ TikTok hors ligne`);
-
-    if (tiktokState.shouldRun) {
-      setTimeout(connectTikTok, 10000);
+    isConnecting = false;
+    isConnected = false;
+    logTikTok(`⚠️ TikTok hors ligne : ${err.message}`);
+    if (tiktokState.shouldRun !== false) {
+      setTimeout(connectTikTok, 10_000);
     }
   }
 }
 
-// ----------------------------
-// Export pour PlayTikTok
-// ----------------------------
+// =========================
+// EXPORT
+// =========================
 module.exports = { connectTikTok };
 
-// ----------------------------
-// Lancement automatique
-// ----------------------------
+// =========================
+// LANCEMENT AUTO
+// =========================
 connectTikTok();

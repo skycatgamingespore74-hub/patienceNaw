@@ -4,7 +4,7 @@ const { connectTikTok } = require("../../tiktok/index"); // l’index TikTok doi
 module.exports = {
   name: "playtiktok",
   execute(client, channel, tags) {
-    const allowedUsers = ["acesky_esport", "nao"];
+    const allowedUsers = ["acesky_esport", "naw_mchh"];
     if (!allowedUsers.includes(tags.username.toLowerCase()) && !tags.mod) return;
 
     if (tiktokState.shouldRun) {
