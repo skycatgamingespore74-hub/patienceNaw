@@ -9,7 +9,7 @@ function getTime() {
 }
 
 module.exports = {
-  name: 'leaveadmin',
+  name: 'leave',
 
   execute(ctx) {
     if (!ctx || !ctx.username || typeof ctx.send !== 'function') return;

@@ -7,7 +7,7 @@ const pointsTikTok = require("../système/points");
 const QUEUE_FILE = path.join(__dirname, "../../data/data.json");
 
 module.exports = {
-  name: "joinadmin",
+  name: "join",
 
   execute(ctx, args) {
     // Sécurité minimale
