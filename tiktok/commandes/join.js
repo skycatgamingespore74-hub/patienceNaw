@@ -2,7 +2,6 @@
 const fs = require("fs");
 const path = require("path");
 const pauseState = require("../système/pause");
-const pointsTikTok = require("../système/points");
 
 const QUEUE_FILE = path.join(__dirname, "../../data/data.json");
 
@@ -13,36 +12,11 @@ module.exports = {
     // Sécurité minimale
     if (!ctx || !ctx.username || typeof ctx.send !== "function") return;
 
-    const user = ctx.username.toLowerCase();
     const displayName = ctx.username;
 
     // ⏸️ Pause globale
     if (pauseState.isPaused) {
       ctx.send(`⏸️ JOIN ignoré : bot en pause`);
-      return;
-    }
-
-    // 🔍 Récupération des points TikTok (avec fallback)
-    let userPoints = {
-      isFan: false,
-      likes: 0,
-      gifts: 0
-    };
-
-    if (typeof pointsTikTok.getUserPoints === "function") {
-      const data = pointsTikTok.getUserPoints(user);
-      if (data) userPoints = data;
-    }
-
-    const hasAccess =
-      userPoints.isFan === true ||
-      userPoints.likes >= 500 ||
-      userPoints.gifts >= 1;
-
-    if (!hasAccess) {
-      ctx.send(
-        `❌ ${displayName} ne peut pas rejoindre : conditions non remplies (fan, 500 likes ou 1 cadeau)`
-      );
       return;
     }
 
@@ -53,7 +27,7 @@ module.exports = {
         const data = JSON.parse(fs.readFileSync(QUEUE_FILE, "utf8"));
         if (Array.isArray(data)) queue = data;
       } catch (err) {
-        console.error("[JOIN] Erreur lecture data.json :", err);
+        console.error("[TikTok JOIN] Erreur lecture data.json :", err);
         ctx.send(`⚠️ Erreur interne (file d'attente)`);
         return;
       }
@@ -72,5 +46,7 @@ module.exports = {
     ctx.send(
       `✅ ${displayName} a rejoint la liste ! Position : ${queue.length}`
     );
+
+    console.log(`➕ [TikTok] ${displayName} ajouté à la file`);
   }
 };

@@ -4,11 +4,13 @@ const path = require("path");
 module.exports = {
   name: "gitpush",
   execute(client, channel, tags) {
-
     // 🔐 Autorisation
     const allowedUsers = ["acesky_esport"];
     if (!allowedUsers.includes(tags.username.toLowerCase())) {
-      client.say(channel, `@${tags["display-name"]}, commande réservée à l’admin ❌`);
+      client.say(
+        channel,
+        `@${tags["display-name"]}, commande réservée à l’admin ❌`,
+      );
       return;
     }
 
@@ -25,7 +27,7 @@ module.exports = {
     const cmd = `
       cd "${projectRoot}" &&
       git add . &&
-      git commit -m "Mise à jour V11 fix" || echo "Aucun changement" &&
+      git commit -m "Mise à jour V11 fix debug tempo" || echo "Aucun changement" &&
       git push -f https://${token}@github.com/skycatgamingespore74-hub/patienceNaw.git main
     `;
 
@@ -39,5 +41,5 @@ module.exports = {
       console.log(stdout);
       client.say(channel, `@${tags["display-name"]}, push GitHub réussi ✅`);
     });
-  }
+  },
 };
