@@ -10,7 +10,7 @@ if (global.__TWITCH_STARTED__) return;
 global.__TWITCH_STARTED__ = true;
 
 // =========================
-// HORODATAGE PRÉCIS
+// HORODATAGE
 // =========================
 function time() {
   const d = new Date();
@@ -70,6 +70,39 @@ if (fs.existsSync(commandesPath)) {
 }
 
 // =========================
+// CHARGEMENT INTERACTIONS (AVEC LOGS)
+// =========================
+const interactions = [];
+const interactionsPath = path.join(__dirname, "interactions");
+
+if (!fs.existsSync(interactionsPath)) {
+  console.error(`${time()} ❌ [Twitch] Dossier interaction introuvable`);
+} else {
+  const files = fs.readdirSync(interactionsPath);
+  console.log(`${time()} 📂 [Twitch] Fichiers interaction détectés :`, files);
+
+  files.forEach(file => {
+    if (!file.endsWith(".js")) return;
+
+    try {
+      const interaction = require(path.join(interactionsPath, file));
+
+      if (typeof interaction.execute === "function") {
+        interactions.push(interaction);
+        console.log(`${time()} 🔹 [Twitch] Interaction chargée : ${file}`);
+      } else {
+        console.error(`${time()} ⚠️ [Twitch] ${file} ignoré (execute manquant)`);
+      }
+
+    } catch (err) {
+      console.error(`${time()} ❌ [Twitch] Erreur interaction ${file}`, err);
+    }
+  });
+}
+
+console.log(`${time()} 📊 [Twitch] Total interactions chargées : ${interactions.length}`);
+
+// =========================
 // CONNEXION TWITCH
 // =========================
 (async () => {
@@ -91,10 +124,25 @@ client.on("message", async (channel, tags, message, self) => {
   if (self) return;
 
   const username = tags["display-name"] || tags.username;
-
-  // LOG MESSAGE (comme TikTok)
   console.log(`${time()} 💬 [Twitch] ${username}: ${message}`);
 
+  // INTERACTIONS
+  for (const interaction of interactions) {
+    try {
+      await interaction.execute({
+        client,
+        channel,
+        tags,
+        message,
+        username,
+        pauseState
+      });
+    } catch (err) {
+      console.error(`${time()} ❌ [Twitch] Erreur interaction`, err);
+    }
+  }
+
+  // COMMANDES
   if (!message.startsWith("!")) return;
 
   const args = message.slice(1).trim().split(/\s+/);

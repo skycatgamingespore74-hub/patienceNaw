@@ -1,48 +1,50 @@
-// points.js
+// interaction/points.js
 const fs = require('fs');
+const path = require('path');
 
 // =====================
 // CONFIG
 // =====================
-const DATA_PATH = './data/paidUsers.json';
-const REWARD_NAME = 'Jouer à Brawl Stars'; // Nom exact qui apparaît dans le chat
-const CHANNEL_NAME = process.env.CHANNEL_NAME;
+const DATA_PATH = path.join(__dirname, '../data/paidUsers.json');
+const REWARD_NAME = 'Jouer à Brawl Stars';
 
 // =====================
 // INIT FICHIER
 // =====================
-if (!fs.existsSync('./data')) fs.mkdirSync('./data');
+const dataDir = path.dirname(DATA_PATH);
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 if (!fs.existsSync(DATA_PATH)) {
   fs.writeFileSync(DATA_PATH, JSON.stringify([], null, 2));
 }
 
 // =====================
-// FONCTION AJOUT UTILISATEUR
+// AJOUT UTILISATEUR
 // =====================
 function addUserToQueue(username) {
-  let list = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
+  const list = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
 
   if (list.includes(username)) {
-    console.log(`⚠️ ${username} est déjà dans la file`);
+    console.log(`⚠️ [Points] ${username} déjà dans la file`);
     return false;
   }
 
   list.push(username);
   fs.writeFileSync(DATA_PATH, JSON.stringify(list, null, 2));
 
-  console.log(`🎮 ${username} ajouté à la file d’attente`);
+  console.log(`🎮 [Points] ${username} ajouté à la file`);
   return true;
 }
 
 // =====================
-// EXPORT POUR LE BOT
+// INTERACTION
 // =====================
-module.exports = (client) => {
-  client.on('message', (channel, tags, message, self) => {
-    if (self) return;
+module.exports = {
+  execute({ client, channel, message }) {
+    if (!client || !message) return;
 
-    // Cherche le message Twitch "XYZ a obtenu Jouer à Brawl Stars (10)"
+    // Exemple attendu :
+    // "Noahm a obtenu Jouer à Brawl Stars (10)"
     const regex = new RegExp(`^(\\w+) a obtenu ${REWARD_NAME}`, 'i');
     const match = message.match(regex);
     if (!match) return;
@@ -52,7 +54,5 @@ module.exports = (client) => {
     if (addUserToQueue(username)) {
       client.say(channel, `@${username} merci pour les points ! 🎮`);
     }
-  });
-
-  console.log(`✅ points.js actif. Écoute toutes les rédemptions "${REWARD_NAME}" dans le chat`);
+  }
 };
