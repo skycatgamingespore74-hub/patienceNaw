@@ -3,26 +3,35 @@ const path = require("path");
 
 let isRestarting = false;
 
-/**
- * Redémarre le bot global (index.js)
- */
 function restartBot() {
-  if (isRestarting) return; // Empêche double restart
+  if (isRestarting) return;
   isRestarting = true;
 
   console.log("🔄 Restart du bot demandé...");
 
-  // Nettoyage du cache Node avant relance
+  const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
+
+  // 🟣 CAS RAILWAY
+  if (isRailway) {
+    console.log("🚄 Environnement Railway détecté");
+    console.log("♻️ Arrêt du process — Railway va redémarrer automatiquement");
+
+    process.exit(0); // Railway relance tout seul
+  }
+
+  // 🟢 CAS REPLIT / LOCAL
+  console.log("🧹 Nettoyage du cache Node...");
   Object.keys(require.cache).forEach(key => delete require.cache[key]);
 
   const indexPath = path.resolve(__dirname, "../index.js");
 
   console.log("🛑 Arrêt du process actuel et lancement d'un nouveau process...");
 
-  // Lance le nouveau process Node
-  spawn("node", [indexPath], { stdio: "inherit", shell: true });
+  spawn("node", [indexPath], {
+    stdio: "inherit",
+    shell: true
+  });
 
-  // Termine le process actuel
   process.exit(0);
 }
 

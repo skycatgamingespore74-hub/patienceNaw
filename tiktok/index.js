@@ -9,6 +9,8 @@ const tiktokState = require("../shared/tiktokStatus");
 // ENV
 // =========================
 const TIKTOK_UNIQUE_ID = process.env.TIKTOK_UNIQUE_ID;
+const TWITCH_CHANNEL = process.env.CHANNEL_NAME;
+
 if (!TIKTOK_UNIQUE_ID) {
   console.error("❌ [TikTok] TIKTOK_UNIQUE_ID manquant");
   process.exit(1);
@@ -20,19 +22,57 @@ if (!TIKTOK_UNIQUE_ID) {
 if (global.__TIKTOK_STARTED__) return;
 global.__TIKTOK_STARTED__ = true;
 
+// =========================
+// ÉTAT
+// =========================
 let isConnecting = false;
 let isConnected = false;
 let tiktok = null;
 
 // =========================
-// ÉTAT & COMMANDES
+// COMMANDES
 // =========================
 const pauseState = { isPaused: false, stoppoints: false };
 const commandes = new Map();
 const commandesPath = path.join(__dirname, "commandes");
 
 // =========================
-// HORODATAGE PRÉCIS
+// LIKES – CHEMIN
+// =========================
+const DATA_DIR = path.join(__dirname, "../data");
+const DATA_LIKE_FILE = path.join(DATA_DIR, "data-like.json");
+
+// =========================
+// SÉCURITÉ FICHIER
+// =========================
+function ensureLikeFile() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+
+  if (!fs.existsSync(DATA_LIKE_FILE)) {
+    fs.writeFileSync(DATA_LIKE_FILE, JSON.stringify({}, null, 2), "utf8");
+    console.log("🆕 data-like.json créé");
+  }
+}
+
+function loadLikes() {
+  ensureLikeFile();
+  try {
+    return JSON.parse(fs.readFileSync(DATA_LIKE_FILE, "utf8"));
+  } catch {
+    fs.writeFileSync(DATA_LIKE_FILE, JSON.stringify({}, null, 2), "utf8");
+    return {};
+  }
+}
+
+function saveLikes(data) {
+  ensureLikeFile();
+  fs.writeFileSync(DATA_LIKE_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+// =========================
+// HORODATAGE
 // =========================
 function now() {
   const d = new Date();
@@ -40,11 +80,21 @@ function now() {
   return `[${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}]`;
 }
 
+function logTikTok(msg) {
+  console.log(`${now()} 💬[TikTok] ${msg}`);
+}
+
 // =========================
-// LOG TIKTOK (NODE ONLY)
+// ENVOI TWITCH
 // =========================
-function logTikTok(message) {
-  console.log(`${now()} 💬[TikTok] ${message}`);
+function sendToTwitch(message) {
+  try {
+    const { client } = require("../twitch/index");
+    if (!client) return;
+    client.say(TWITCH_CHANNEL, `[TikTok] ${message}`);
+  } catch {
+    console.warn(`${now()} ⚠️ Twitch non prêt`);
+  }
 }
 
 // =========================
@@ -60,13 +110,13 @@ if (fs.existsSync(commandesPath)) {
         logTikTok(`✅ Commande chargée : ${cmd.name}`);
       }
     } catch (err) {
-      console.error(`${now()} [TikTok] ❌ Erreur commande ${file}`, err);
+      console.error(`${now()} ❌ Erreur commande ${file}`, err);
     }
   });
 }
 
 // =========================
-// CONNEXION TIKTOK
+// CONNEXION TIKTOK (ancien index avec toutes les logs)
 // =========================
 async function connectTikTok() {
   if (isConnecting || isConnected) {
@@ -80,8 +130,6 @@ async function connectTikTok() {
   }
 
   isConnecting = true;
-
-  // 🔹 Log unique de connexion
   logTikTok("⌛ Connexion TikTok...");
 
   tiktok = new WebcastPushConnection(TIKTOK_UNIQUE_ID);
@@ -111,7 +159,7 @@ async function connectTikTok() {
   });
 
   // ------------------------
-  // Événement message
+  // Événement chat
   // ------------------------
   tiktok.on("chat", data => {
     if (!data?.uniqueId || !data?.comment) return;
@@ -130,11 +178,28 @@ async function connectTikTok() {
     if (!command) return;
 
     try {
-      command.execute({ platform: "tiktok", pauseState, username, send: logTikTok }, args);
+      command.execute({ platform: "tiktok", pauseState, username, send: sendToTwitch }, args);
       logTikTok(`▶️ Commande exécutée : !${name} par ${username}`);
     } catch (err) {
       console.error(`${now()} [TikTok] ❌ Erreur commande !${name}`, err);
     }
+  });
+
+  // ------------------------
+  // Événement like
+  // ------------------------
+  tiktok.on("like", data => {
+    if (!data?.uniqueId || !data?.likeCount) return;
+
+    const username = data.uniqueId;
+    const likes = Number(data.likeCount) || 0;
+    const likeCounter = loadLikes();
+
+    if (!likeCounter[username]) likeCounter[username] = 0;
+    likeCounter[username] += likes;
+
+    saveLikes(likeCounter);
+    logTikTok(`❤️ ${username} a envoyé ${likes} like(s) (total: ${likeCounter[username]})`);
   });
 
   // ------------------------
@@ -153,11 +218,8 @@ async function connectTikTok() {
 }
 
 // =========================
-// EXPORT
-// =========================
-module.exports = { connectTikTok };
-
-// =========================
-// AUTO START
+// START
 // =========================
 connectTikTok();
+
+module.exports = { connectTikTok };
