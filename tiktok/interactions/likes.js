@@ -5,6 +5,4 @@ module.exports = (data) => {
 
   const likes = data.likeCount || 1;
   points.addLikes(data.uniqueId, likes);
-
-  console.log(`❤️ ${data.uniqueId} +${likes} likes`);
 };

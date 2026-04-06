@@ -199,7 +199,7 @@ async function connectTikTok() {
     likeCounter[username] += likes;
 
     saveLikes(likeCounter);
-    logTikTok(`❤️ ${username} a envoyé ${likes} like(s) (total: ${likeCounter[username]})`);
+    //logTikTok(`❤️ ${username} a envoyé ${likes} like(s) (total: ${likeCounter[username]})`);
   });
 
   // ------------------------
