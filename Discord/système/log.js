@@ -1,5 +1,5 @@
 let discordClient = null;
-let logChannelId = (PROCESS.env.DISCORDLOG);
+let logChannelId = (process.env.DISCORDLOG);
 
 // Appelé depuis l'index Discord
 function initLogs(client, channelId) {
